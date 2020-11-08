@@ -110,4 +110,3 @@ if __name__ == '__main__':
     main.get_access_token()
     main.sort_and_return_all_files()
     main.get_folder_id_for_file_placement()
-    
