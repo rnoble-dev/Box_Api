@@ -29,7 +29,7 @@ class APIConnect:
     def get_access_token(self):
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_argument('--headless')
-        driver = webdriver.Chrome('./chromedriver', chrome_options=chrome_options)
+        driver = webdriver.Chrome('./chromedriver', options=chrome_options)
         sdk = OAuth2(
             client_id=self.client_id,
             client_secret=self.client_secret
