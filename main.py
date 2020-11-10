@@ -2,7 +2,6 @@ import os
 import time
 import urllib.parse as urlparse
 from urllib.parse import parse_qs
-
 from boxsdk import Client, OAuth2
 from dotenv import load_dotenv
 from selenium import webdriver
