@@ -1,0 +1,12 @@
+attrs==20.3.0
+boxsdk==2.10.0
+certifi==2020.6.20
+chardet==3.0.4
+idna==2.10
+python-dotenv==0.15.0
+requests==2.24.0
+requests-toolbelt==0.9.1
+selenium==3.141.0
+six==1.15.0
+urllib3==1.25.11
+wrapt==1.12.1

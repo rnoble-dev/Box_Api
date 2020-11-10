@@ -22,7 +22,9 @@ class APIConnect:
         self.login = LOGIN
         self.password = PASSWORD
         self.client = self.get_access_token()
-        self.files = []
+        self.duplicate_pdf = (
+            f"{os.path.dirname(os.path.abspath(__file__))}/file.pdf"
+        )
 
     def get_access_token(self):
         chrome_options = webdriver.ChromeOptions()
@@ -55,58 +57,95 @@ class APIConnect:
         # user = client.user().get()
         return client
 
-    def sort_and_return_all_files(self):
+    def get_all_folder_ids(self):
         upload_folder_id = ''
-        sub_folders = []
+        upload_error_folder_id = ''
+        fin_folio = ''
+        client = ''
         root_folder = self.client.root_folder().get_items()
         for items in root_folder:
             if "Upload Automation" in items.name:
                 upload_folder_id = items.id
+            if "Finfolio" in items.name:
+                fin_folio = items.id
+        fin_folio_folder = self.client.folder(folder_id=fin_folio).get_items()
+        for items in fin_folio_folder:
+            if "Upload Automation Errors" in items.name:
+                upload_error_folder_id = items.id
+            if "Client" in items.name:
+                client = items.id
+        self.get_files_in_main_folder_create_folders_move_files(upload_folder_id, upload_error_folder_id, client)
+
+    def get_files_in_main_folder_create_folders_move_files(self, upload_folder_id, upload_error_folder_id,
+                                                           client_folder_id):
+        error_folder = self.client.folder(folder_id=upload_error_folder_id).get_items()
+        client_folder = self.client.folder(folder_id=client_folder_id).get_items()
         items = self.client.folder(folder_id=upload_folder_id).get_items()
+        error_file_names = [file.name for file in error_folder]
+        folder_name = [folder.name for folder in client_folder]
         for item in items:
             if item.type == 'file':
-                self.files.append(f"{item.id}---{item.name}")
+                if '---' not in item.name:
+                    if item.name not in error_file_names:
+                        file_to_move = self.client.file(item.id)
+                        destination_folder = self.client.folder(upload_error_folder_id)
+                        file_to_move.move(destination_folder)
+                else:
+                    if item.name.split('---')[0] not in folder_name:
+                        new_folder = self.client.folder(client_folder_id).create_subfolder(item.name.split('---')[0])
+                        file_to_move = self.client.file(item.id)
+                        destination_folder = self.client.folder(new_folder.id)
+                        file_to_move.move(destination_folder, name=item.name.split('---')[1])
+                    else:
+                        self.download_duplicate_file(item, client_folder_id)
             if item.type == 'folder':
-                sub_folders.append(item.id)
-        for folder_id in sub_folders:
-            items = self.client.folder(folder_id=folder_id).get_items()
-            file_names = [f"{item.id}---{item.name}" for item in items]
-            self.files.extend(file_names)
+                self.get_files_sub_folders_create_folders_move_files(item.id, client_folder_id, upload_error_folder_id)
 
-    def get_folder_id_for_file_placement(self):
-        fin_folio_folder_id = ''
-        client_folder_id = ''
-        root_folder = self.client.root_folder().get_items()
-        for info in root_folder:
-            if "Finfolio" in info.name:
-                fin_folio_folder_id = info.id
-        items = self.client.folder(folder_id=fin_folio_folder_id).get_items()
+    def get_files_sub_folders_create_folders_move_files(self, folder_id, client_folder_id, upload_error_folder_id):
+        error_folder = self.client.folder(folder_id=upload_error_folder_id).get_items()
+        client_folder = self.client.folder(folder_id=client_folder_id).get_items()
+        items = self.client.folder(folder_id=folder_id).get_items()
+        error_file_names = [file.name for file in error_folder]
+        folder_name = [folder.name for folder in client_folder]
         for item in items:
-            if "Client" in item.name:
-                client_folder_id = item.id
-        self.create_new_folders(client_folder_id)
-        return client_folder_id
+            if item.type == 'file':
+                if '---' not in item.name:
+                    if item.name not in error_file_names:
+                        file_to_move = self.client.file(item.id)
+                        destination_folder = self.client.folder(upload_error_folder_id)
+                        file_to_move.move(destination_folder)
+                else:
+                    if item.name.split('---')[0] not in folder_name:
+                        new_folder = self.client.folder(client_folder_id).create_subfolder(item.name.split('---')[0])
+                        file_to_move = self.client.file(item.id)
+                        destination_folder = self.client.folder(new_folder.id)
+                        file_to_move.move(destination_folder, name=item.name.split('---')[1])
+                    else:
+                        self.download_duplicate_file(item, client_folder_id)
 
-    def create_new_folders(self, client_folder_id):
-        folders = self.client.folder(folder_id=client_folder_id).get_items()
-        folder_name = [folder.name for folder in folders]
-        for file in self.files:
-            format_name = file.split('---')
-            if format_name[1] not in folder_name:
-                self.client.folder(client_folder_id).create_subfolder(format_name[1])
-            self.sort_and_move_files(format_name, client_folder_id)
+    def download_duplicate_file(self, item, client_folder_id):
+        if not os.path.exists('file.pdf'):
+            open('file.pdf', 'w')
+        output_file = open(self.duplicate_pdf, 'wb')
+        self.client.file(item.id).download_to(output_file)
+        self.upload_new_version_existing_file(item, client_folder_id)
 
-    def sort_and_move_files(self, file_name, client_folder):
-        folders = self.client.folder(folder_id=client_folder).get_items()
-        for folder in folders:
-            if file_name[1] == folder.name:
-                file_to_move = self.client.file(file_name[0])
-                destination_folder = self.client.folder(folder.id)
-                file_to_move.move(destination_folder, name=file_name[2])
+    def upload_new_version_existing_file(self, item, client_folder_id):
+        client_folder = self.client.folder(folder_id=client_folder_id).get_items()
+        folder_name = [f"{folder.id},{folder.name}" for folder in client_folder]
+        for folder_stats in folder_name:
+            format_name = folder_stats.split(',')
+            if item.name.split('---')[0] == format_name[1]:
+                files = self.client.folder(folder_id=format_name[0]).get_items()
+                for file in files:
+                    if item.name.split('---')[1] == file.name:
+                        stream = open(self.duplicate_pdf, 'rb')
+                        self.client.file(file.id).update_contents_with_stream(stream)
+                        self.client.file(file_id=item.id).delete()
+                        os.remove('file.pdf')
 
 
 if __name__ == '__main__':
     main = APIConnect()
     main.get_access_token()
-    main.sort_and_return_all_files()
-    main.get_folder_id_for_file_placement()
+    main.get_all_folder_ids()
