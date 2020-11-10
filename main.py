@@ -1,10 +1,11 @@
+import os
+import time
+import urllib.parse as urlparse
+from urllib.parse import parse_qs
+
 from boxsdk import Client, OAuth2
 from dotenv import load_dotenv
 from selenium import webdriver
-import urllib.parse as urlparse
-from urllib.parse import parse_qs
-import time
-import os
 
 load_dotenv()
 CLIENT_ID = os.environ.get("CLIENT_ID")
@@ -54,7 +55,6 @@ class APIConnect:
             refresh_token=refresh_token
         )
         client = Client(oauth)
-        # user = client.user().get()
         return client
 
     def get_all_folder_ids(self):
