@@ -1,2 +1,22 @@
 .env
 env
+
+#Mac
+.DS_Store
+.vscode*
+
+
+# Temporary files
+.#~
+*.*~
+~.#~
+/.#~
+.vscode*
+
+venv/
+Pipfile.lock
+
+# databases
+db.*
+*.sqlite3
+.idea/

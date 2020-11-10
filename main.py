@@ -147,5 +147,4 @@ class APIConnect:
 
 if __name__ == '__main__':
     main = APIConnect()
-    main.get_access_token()
     main.get_all_folder_ids()
