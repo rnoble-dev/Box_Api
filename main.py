@@ -25,7 +25,6 @@ class APIConnect:
         self.main_folder = ''
         self.main_error_folder = ''
         self.client_folder = ''
-        self.sub_folder_name = ''
         self.duplicate_pdf = (
             f"{os.path.dirname(os.path.abspath(__file__))}/file.pdf"
         )
