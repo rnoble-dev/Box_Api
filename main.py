@@ -1,4 +1,5 @@
 import os
+import io
 import time
 import urllib.parse as urlparse
 from urllib.parse import parse_qs
@@ -25,9 +26,6 @@ class APIConnect:
         self.main_folder = ''
         self.main_error_folder = ''
         self.client_folder = ''
-        self.duplicate_pdf = (
-            f"{os.path.dirname(os.path.abspath(__file__))}/file.pdf"
-        )
 
     def get_access_token(self):
         chrome_options = webdriver.ChromeOptions()
@@ -115,12 +113,8 @@ class APIConnect:
                 destination_folder = self.client.folder(create_folder.id)
                 file_to_move.move(destination_folder, name=file__name)
             else:
-                print('Downloading Duplicate Pdf ......')
-                if not os.path.exists('file.pdf'):
-                    open('file.pdf', 'w')
-                output_file = open(self.duplicate_pdf, 'wb')
-                self.client.file(file_id).download_to(output_file)
-                self.upload_new_version_from_main_folder(file_name, file_id)
+                file_content = self.client.file(file_id).content()
+                self.upload_new_version_from_main_folder(file_name, file_id, file_content)
 
     def create_folders_and_move_files_from_sub(self, sub_folder_name, file_name, file_id):
         full_file_name = file_name
@@ -146,14 +140,10 @@ class APIConnect:
                     destination_folder = self.client.folder(sub_folder.id)
                     file_to_move.move(destination_folder, name=file__name)
                 else:
-                    print('Downloading Duplicate Pdf ......')
-                    if not os.path.exists('file.pdf'):
-                        open('file.pdf', 'w')
-                    output_file = open(self.duplicate_pdf, 'wb')
-                    self.client.file(file_id).download_to(output_file)
-                    self.upload_new_version_from_sub_folder(sub_folder_name, file_name, file_id)
+                    file_content = self.client.file(file_id).content()
+                    self.upload_new_version_from_sub_folder(sub_folder_name, file_name, file_id, file_content)
 
-    def upload_new_version_from_main_folder(self, file_name, file_id):
+    def upload_new_version_from_main_folder(self, file_name, file_id, file_content):
         print('Checking Version of File in Client Folder ......')
         folder_name = file_name.split('---')[0]
         file__name = file_name.split('---')[1]
@@ -170,25 +160,22 @@ class APIConnect:
                     file_to_move = self.client.file(file_id)
                     destination_folder = self.client.folder(folder_id)
                     file_to_move.move(destination_folder, name=file__name)
-                    os.remove('file.pdf')
                 else:
                     for file in files:
                         if file.type == 'file':
                             if file__name == file.name:
                                 print('UPDATING VERSION OF FILE FOR ..' + file__name)
-                                stream = open(self.duplicate_pdf, 'rb')
+                                stream = io.BytesIO(file_content)
                                 self.client.file(file.id).update_contents_with_stream(stream)
                                 self.client.file(file_id=file_id).delete()
-                                os.remove('file.pdf')
                         if file__name not in filename:
                             print('ADDING ' + file__name + ' to folder')
                             file_to_move = self.client.file(file_id)
                             destination_folder = self.client.folder(folder_id)
                             file_to_move.move(destination_folder, name=file__name)
                             filename.append(file__name)
-                            os.remove('file.pdf')
 
-    def upload_new_version_from_sub_folder(self, sub_folder_name, file_name, file_id):
+    def upload_new_version_from_sub_folder(self, sub_folder_name, file_name, file_id, file_content):
         print('Checking Version of File in Client Sub Folder ......')
         folder_name = file_name.split('---')[0]
         file__name = file_name.split('---')[1]
@@ -206,7 +193,6 @@ class APIConnect:
                     file_to_move = self.client.file(file_id)
                     destination_folder = self.client.folder(create_sub_folder.id)
                     file_to_move.move(destination_folder, name=file__name)
-                    os.remove('file.pdf')
                 else:
                     for item in folders_files:
                         if sub_folder_name in content_name:
@@ -215,10 +201,9 @@ class APIConnect:
                                 for file in sub__folder:
                                     if file__name == file.name:
                                         print('UPDATING VERSION OF FILE FOR ..' + file__name + 'IN SUB FOLDER')
-                                        stream = open(self.duplicate_pdf, 'rb')
+                                        stream = io.BytesIO(file_content)
                                         self.client.file(file.id).update_contents_with_stream(stream)
                                         self.client.file(file_id=file_id).delete()
-                                        os.remove('file.pdf')
                         if sub_folder_name not in content_name:
                             print('CREATING SUB FOLDER AND ADDING FILE ' + file__name)
                             create_sub_folder = self.client.folder(folder_id).create_subfolder(sub_folder_name)
@@ -226,7 +211,6 @@ class APIConnect:
                             destination_folder = self.client.folder(create_sub_folder.id)
                             file_to_move.move(destination_folder, name=file__name)
                             content_name.append(sub_folder_name)
-                            os.remove('file.pdf')
 
 
 if __name__ == '__main__':
